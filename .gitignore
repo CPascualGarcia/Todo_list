@@ -2,3 +2,5 @@
 /todolist/target/debug
 /todolist/target/release
 /todolist/target
+/sql_jr_repl/target
+sql_jr_repl/history.txt
