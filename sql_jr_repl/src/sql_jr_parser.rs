@@ -32,3 +32,19 @@ pub trait Parse<'a>: Sized {
 // ParserExt is mostly for adding `.context` on calls to identifier to say what kind of identifier we want
 use nom_supreme::{tag::complete::tag_no_case, ParserExt};
 // many other imports omitted
+
+#[derive(Debug,Clone,Eq,Hash,PartialEq,Serialize,Deserialize)]
+pub enum sqlTypeinfo {
+    String,
+    Int,
+}
+
+// Parse "string | int"
+impl <'a> Parse<'a> for sqlTypeinfo {
+    fn parse(input: RawSpan<'a>) -> ParseResult<'a, Self> {
+        // Using context will pull later a better error message
+        context("Column Type",
+        
+        )(input)
+    }
+}
