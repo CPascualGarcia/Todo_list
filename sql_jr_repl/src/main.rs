@@ -80,9 +80,9 @@ fn main() -> Result<()> {
                                 // print!("{}", lines[x as usize]);
                             },
                             ("write",x) if x>=0 => {
-                                file.write_all(b"Hello, world!\n")?;
-                                // print!("Write content");
-                                // write!(file, "{}", inputs[1]).expect("Unable to write to file!");
+                                // file.write_all(b"Hello, world!\n")?;
+                                println!("Writing content...");
+                                write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
                             },
                             _ => {
                                 println!("Invalid command");
