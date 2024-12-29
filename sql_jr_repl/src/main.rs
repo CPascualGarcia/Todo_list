@@ -1,7 +1,7 @@
 use rustyline::error::ReadlineError;
 use rustyline::{Editor, Result};
 
-use std::fs::File;
+use std::fs::{OpenOptions, File};
 use std::io::prelude::*;
 use std::io::BufReader;
 // use sql_jr_execution;
@@ -14,8 +14,13 @@ fn main() -> Result<()> {
         println!("No previous history.");
     }
 
-    let file = File::open("file.txt")?;
 
+    let mut file = OpenOptions::new().read(true).write(true).create(true).open("file.txt").unwrap();
+    // let mut file = OpenOptions::new().write(true).create(true).open("file.txt").unwrap();
+    
+    // THIS BELOW PREVENTS THE ERROR BUT ONLY WORKS AS READER!
+    // let mut file = File::open("file.txt")?;
+    
     // let file = OpenOptions::new()
     //     .write(true)
     //     .create(true)
@@ -26,7 +31,7 @@ fn main() -> Result<()> {
     let mut lines: Vec<String> = Vec::new();
     
     
-    let reader = BufReader::new(file);
+    let reader = BufReader::new(&file);
 
     for line in reader.lines().take(10){
         match line { 
@@ -75,7 +80,8 @@ fn main() -> Result<()> {
                                 // print!("{}", lines[x as usize]);
                             },
                             ("write",x) if x>=0 => {
-                                print!("Write content");
+                                file.write_all(b"Hello, world!\n")?;
+                                // print!("Write content");
                                 // write!(file, "{}", inputs[1]).expect("Unable to write to file!");
                             },
                             _ => {
