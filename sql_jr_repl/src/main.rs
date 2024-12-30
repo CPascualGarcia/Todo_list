@@ -1,7 +1,7 @@
 use rustyline::error::ReadlineError;
 use rustyline::{Editor, Result};
 
-use std::fs::{OpenOptions, File};
+use std::fs::{OpenOptions, rename};
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::usize;
@@ -16,19 +16,31 @@ fn main() -> Result<()> {
     }
 
 
-    // Open and read the file
-    let file = OpenOptions::new().read(true).write(true).create(true).open("file.txt").unwrap();   
-    let reader = BufReader::new(&file);
-    let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
+    // // Open and read the file
+    // let file = OpenOptions::new().read(true).write(true).create(true).open("file.txt").unwrap();   
+    // let reader = BufReader::new(&file);
+    // let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
 
-    // Create output file
-    let mut file2 = OpenOptions::new().read(true).write(true).create(true).open("file_NEW.txt").unwrap();
-    // let mut writer: BufWriter::new(file2);
+    // // Create output file
+    // let mut file2 = OpenOptions::new().read(true).write(true).create(true).open("file_NEW.txt").unwrap();
+    // // let mut writer: BufWriter::new(file2);
 
 
 
 
     loop {
+        // Open and read the file
+        let file1_path = "file.txt";
+        let file = OpenOptions::new().read(true).write(true).create(true).open(file1_path).unwrap();   
+        let reader = BufReader::new(&file);
+        let mut lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
+        
+
+        // Create output file
+        let file2_path = "file_NEW.txt";
+        let mut file2 = OpenOptions::new().read(true).write(true).create(true).open(file2_path).unwrap();
+        // let mut writer: BufWriter::new(file2);
+
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
@@ -39,9 +51,19 @@ fn main() -> Result<()> {
                         println!("Goodbye!");
                         break
                     },
+                    "size" => {
+                        println!("Size of file: {}", lines.len());
+                    }
                     "Make a sandwich" => {
                         println!("Making a sandwich...");
                     }
+
+                    "read" => {
+                        for line in lines {
+                            println!("{}", line);
+                        }
+                        // print!("{}", lines[x as usize]);
+                    },
                     //  _ => {
                     //     rl.add_history_entry(line.as_str())?;
                     //     // 
@@ -66,27 +88,32 @@ fn main() -> Result<()> {
                             ("erase",x) if x>=0 => {
                                 // file.write_all(b"Hello, world!\n")?;
                                 println!("Erasing content...");
-                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
+                                lines.remove(x as usize);
+                                for i in 0 as usize..(lines.len()) {
+                                    write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+                                }
+                                // Close original file
+                                drop(file);
+                                // Overwrite original file
+                                rename(file2_path, file1_path).expect("Failed to rename file");
                             },
                             ("write",x) if x>=0 => {
-                                // file.write_all(b"Hello, world!\n")?;
                                 println!("Provide content to be written:");
                                 let mut buffer = String::new();
                                 std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
-                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
 
-                                // println!("Writing content...");
+                                // Write contents in NEW file
                                 for i in 0..x {
                                     write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
                                 }
-                                // write!(file2, "{}\n", inputs[1]).expect("Unable to write to file!");
                                 write!(file2, "{}", buffer).expect("Unable to write to file!");
-
                                 for i in x as usize..(lines.len()) {
                                     write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
                                 }
-                                // write!(file2, "{}\n", lines[x]).expect("Unable to write to file!");
-                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
+                                // Close original file
+                                drop(file);
+                                // Overwrite original file
+                                rename(file2_path, file1_path).expect("Failed to rename file");
                             },
                             _ => {
                                 println!("Invalid command");
@@ -119,11 +146,13 @@ fn display_help(){
     let help: &str = "
     <String> - String input
 
-    read-<integer> - Read content
-    write-<string> - Write content
+        read-<integer> - Read content on line <integer>
+        write-<integer> - Write content on line <integer>
+            - <String> Provide content to be written. 
 
     Commands
 
+    size   - Check the no. of lines
     help   - Display this help message
     exit   - Exit the program
     read   - Display content 
