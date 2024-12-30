@@ -28,3 +28,21 @@ pub fn writer(file1_path: &str,
 
     Ok(())
 }
+
+pub fn eraser_line(file1_path: &str, x: usize, lines: &mut Vec<String>) -> Result<(), std::io::Error> {
+    let file2_path = format!("file_NEW.txt");
+    let mut file2 = OpenOptions::new().read(true).write(true).create(true).open(&file2_path).unwrap();
+    
+    // Remove the content of the chosen line
+    lines.remove(x as usize);
+
+    // Write contents in NEW file
+    for i in 0 as usize..(lines.len()) {
+        write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+    }
+
+    // Overwrite original file
+    rename(file2_path, file1_path).expect("Failed to rename file");
+
+    Ok(())
+} 
