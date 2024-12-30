@@ -39,8 +39,8 @@ fn main() -> Result<()> {
         
 
         // Create output file
-        let file2_path = "file_NEW.txt";
-        let mut file2 = OpenOptions::new().read(true).write(true).create(true).open(file2_path).unwrap();
+        // let file2_path = "file_NEW.txt";
+        // let file2 = OpenOptions::new().read(true).write(true).create(true).open(file2_path).unwrap();
         // let mut writer: BufWriter::new(file2);
 
         let readline = rl.readline(">> ");
@@ -83,7 +83,11 @@ fn main() -> Result<()> {
                     _ => {
                         let inputs: Vec<&str> = line.split_whitespace().collect();
 
-                        // let indx = inputs[1].parse::<i32>().unwrap();
+                        let indx = inputs[1].parse::<i32>().unwrap();
+                        if indx >= lines.len() as i32 {
+                            println!("Index out of range! List has {} lines", lines.len());
+                            continue
+                        }
 
                         match (inputs[0],inputs[1].parse::<i32>().unwrap()) {
                             ("read",x) if x>=0 && x<lines.len() as i32 => {
@@ -98,14 +102,6 @@ fn main() -> Result<()> {
                                 eraser_line(file1_path, x as usize, &mut lines)?;
 
 
-                                // lines.remove(x as usize);
-                                // for i in 0 as usize..(lines.len()) {
-                                //     write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
-                                // }
-                                // // Close original file
-                                // drop(file);
-                                // // Overwrite original file
-                                // rename(file2_path, file1_path).expect("Failed to rename file");
                             },
                             ("write",x) if x>=0 => {
                                 
