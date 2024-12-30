@@ -6,6 +6,8 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::usize;
 // use sql_jr_execution;
+extern crate sql_jr_repl;
+use sql_jr_repl::writer;
 
 const HISTORY_FILE: &str = "./history.txt";
 
@@ -81,7 +83,7 @@ fn main() -> Result<()> {
                     _ => {
                         let inputs: Vec<&str> = line.split_whitespace().collect();
                         match (inputs[0],inputs[1].parse::<i32>().unwrap()) {
-                            ("read",x) if x>=0 => {
+                            ("read",x) if x>=0 && x<lines.len() as i32 => {
                                 println!("Reading content... \n{}", lines[x as usize]);
                                 // print!("{}", lines[x as usize]);
                             },
@@ -98,22 +100,30 @@ fn main() -> Result<()> {
                                 rename(file2_path, file1_path).expect("Failed to rename file");
                             },
                             ("write",x) if x>=0 => {
-                                println!("Provide content to be written:");
-                                let mut buffer = String::new();
-                                std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
-
-                                // Write contents in NEW file
-                                for i in 0..x {
-                                    write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
-                                }
-                                write!(file2, "{}", buffer).expect("Unable to write to file!");
-                                for i in x as usize..(lines.len()) {
-                                    write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
-                                }
+                                
                                 // Close original file
                                 drop(file);
                                 // Overwrite original file
-                                rename(file2_path, file1_path).expect("Failed to rename file");
+                                writer(file1_path, x as usize, &lines)?;
+                                
+                                
+                                
+                                // println!("Provide content to be written:");
+                                // let mut buffer = String::new();
+                                // std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+
+                                // // Write contents in NEW file
+                                // for i in 0..x {
+                                //     write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+                                // }
+                                // write!(file2, "{}", buffer).expect("Unable to write to file!");
+                                // for i in x as usize..(lines.len()) {
+                                //     write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+                                // }
+                                // // Close original file
+                                // drop(file);
+                                // // Overwrite original file
+                                // rename(file2_path, file1_path).expect("Failed to rename file");
                             },
                             _ => {
                                 println!("Invalid command");
