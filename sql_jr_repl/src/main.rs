@@ -4,6 +4,7 @@ use rustyline::{Editor, Result};
 use std::fs::{OpenOptions, File};
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::usize;
 // use sql_jr_execution;
 
 const HISTORY_FILE: &str = "./history.txt";
@@ -15,35 +16,18 @@ fn main() -> Result<()> {
     }
 
 
-    let mut file = OpenOptions::new().read(true).write(true).create(true).open("file.txt").unwrap();
-    // let mut file = OpenOptions::new().write(true).create(true).open("file.txt").unwrap();
-    
-    // THIS BELOW PREVENTS THE ERROR BUT ONLY WORKS AS READER!
-    // let mut file = File::open("file.txt")?;
-    
-    // let file = OpenOptions::new()
-    //     .write(true)
-    //     .create(true)
-    //     .open("file.txt")?; // File::open("List.csv")?;
-    
-    
-    // let reader = BufReader::new(file);
-    let mut lines: Vec<String> = Vec::new();
-    
-    
+    // Open and read the file
+    let file = OpenOptions::new().read(true).write(true).create(true).open("file.txt").unwrap();   
     let reader = BufReader::new(&file);
+    let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
 
-    for line in reader.lines().take(10){
-        match line { 
-            Ok(line) => {lines.push(line)},
-            Err(error) => {println!("Error reading line: {}", error)}
-        }
-    };
+    // Create output file
+    let mut file2 = OpenOptions::new().read(true).write(true).create(true).open("file_NEW.txt").unwrap();
+    // let mut writer: BufWriter::new(file2);
 
 
-    // drop(reader); // Close the file
 
-    // let mut exec = sql_jr_execution::Execution::new();
+
     loop {
         let readline = rl.readline(">> ");
         match readline {
@@ -79,10 +63,30 @@ fn main() -> Result<()> {
                                 println!("Reading content... \n{}", lines[x as usize]);
                                 // print!("{}", lines[x as usize]);
                             },
+                            ("erase",x) if x>=0 => {
+                                // file.write_all(b"Hello, world!\n")?;
+                                println!("Erasing content...");
+                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
+                            },
                             ("write",x) if x>=0 => {
                                 // file.write_all(b"Hello, world!\n")?;
-                                println!("Writing content...");
-                                write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
+                                println!("Provide content to be written:");
+                                let mut buffer = String::new();
+                                std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
+
+                                // println!("Writing content...");
+                                for i in 0..x {
+                                    write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+                                }
+                                // write!(file2, "{}\n", inputs[1]).expect("Unable to write to file!");
+                                write!(file2, "{}", buffer).expect("Unable to write to file!");
+
+                                for i in x as usize..(lines.len()) {
+                                    write!(file2, "{}\n", lines[i as usize]).expect("Unable to write to file!");
+                                }
+                                // write!(file2, "{}\n", lines[x]).expect("Unable to write to file!");
+                                // write!(file, "{}\n", inputs[1]).expect("Unable to write to file!");
                             },
                             _ => {
                                 println!("Invalid command");
