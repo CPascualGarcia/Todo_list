@@ -31,7 +31,8 @@ fn main() -> Result<()> {
 
         //////////////////////////////////////////////////////////////////////////
         // Open database
-        let conn = Connection::open_with_flags("TodoList.db",
+        let db_path: &str = "TodoList.db";
+        let conn = Connection::open_with_flags(db_path,
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
 
         // Create basic table
@@ -42,11 +43,11 @@ fn main() -> Result<()> {
 
         // Insert rows into the table
         let mut stmt = conn.prepare(
-            "INSERT INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
+            "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
         stmt.execute((13, "sandwich")).unwrap();
             
         conn.execute(
-            "INSERT INTO tasks (id, task) VALUES (?1, ?2)",
+            "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
             (14, "mustard"),
         ).unwrap();
 
