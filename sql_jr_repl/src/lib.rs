@@ -1,7 +1,7 @@
 use std::fs::{OpenOptions,rename};
 use std::io::prelude::*;
 
-pub fn writer(file1_path: &str,
+pub fn writer_line(file1_path: &str,
     x: usize,
     lines: &Vec<String>) -> Result<(), std::io::Error> {
     
