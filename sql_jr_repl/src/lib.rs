@@ -100,3 +100,21 @@ fn test_db_setup() {
     assert_eq!(task, "mustard");
 
 }
+
+#[test]
+fn test_db_empty_entry() {
+    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap();       // Set database
+
+    let index: i32 = -1; // Index of non-existent entry
+
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
+    ).unwrap();
+
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
+    let mut rows = stmt.query(&[&index]).unwrap();
+
+    // Assert that no entry -1 exists
+    assert!(rows.next().unwrap().is_none());
+}
