@@ -11,9 +11,6 @@ extern crate sql_jr_repl;
 use sql_jr_repl::*;//{writer_line,eraser_line};
 
 
-use rusqlite::Connection;
-use rusqlite::OpenFlags;
-
 const HISTORY_FILE: &str = "./history.txt";
 
 fn main() -> Result<()> {
@@ -30,41 +27,9 @@ fn main() -> Result<()> {
         let mut lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
 
         //////////////////////////////////////////////////////////////////////////
-        // Open database
+        // Prepare database
         let db_path: &str = "TodoList.db";
-        let conn = Connection::open_with_flags(db_path,
-            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
-
-        // Create basic table
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS 
-            tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
-            ()).unwrap();
-
-        // Insert rows into the table
-        let mut stmt = conn.prepare(
-            "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
-        stmt.execute((13, "sandwich")).unwrap();
-            
-        conn.execute(
-            "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
-            (14, "mustard"),
-        ).unwrap();
-
-        
-        // Prepare a query statement
-        let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
-        // Query the database
-        // let mut rows = stmt.query(&[(":name", "one")]).unwrap();
-        let mut rows = stmt.query(&[&13]).unwrap();
-        // Iterate over the results
-        while let Some(row) = rows.next().unwrap() {
-            let id: i32 = row.get(0).unwrap();
-            let task: String = row.get(1).unwrap();
-        
-            println!("id: {}, task: {}", id, task);
-        }
-        
+        db_setup(db_path).unwrap();
         //////////////////////////////////////////////////////////////////////////
         
 

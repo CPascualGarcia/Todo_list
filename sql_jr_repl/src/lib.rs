@@ -1,5 +1,6 @@
 use std::fs::{OpenOptions,rename};
 use std::io::prelude::*;
+use rusqlite::{Connection,OpenFlags};
 
 pub fn writer_line(file1_path: &str,
     x: usize,
@@ -46,3 +47,56 @@ pub fn eraser_line(file1_path: &str, x: usize, lines: &mut Vec<String>) -> Resul
 
     Ok(())
 } 
+
+
+pub fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+    // Create basic table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS 
+        tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
+        ()).unwrap();
+
+    // Insert rows into the table
+    let mut stmt = conn.prepare(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
+    stmt.execute((13, "sandwich")).unwrap();
+        
+    conn.execute(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
+        (14, "mustard"),
+    ).unwrap();
+
+    Ok(())
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// TESTS
+///////////////////////////////////////////////////////////////////////////////
+
+#[test]
+fn test_db_setup() {
+    // Call the database
+    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap(); // Set database
+
+    let conn = Connection::open_with_flags(db_path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+
+    // Prepare a query statement
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
+    
+    // Query the database
+    let mut rows = stmt.query(&[&14]).unwrap();
+
+    let row = rows.next().unwrap().unwrap();
+    let id: i32 = row.get(0).unwrap();
+    let task: String = row.get(1).unwrap();
+
+    assert_eq!(id, 14);
+    assert_eq!(task, "mustard");
+
+}
