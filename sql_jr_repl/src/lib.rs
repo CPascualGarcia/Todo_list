@@ -1,4 +1,4 @@
-use std::fs::{OpenOptions,rename};
+use std::fs::{OpenOptions,rename,remove_file};
 use std::io::prelude::*;
 use rusqlite::{Connection,OpenFlags};
 
@@ -60,14 +60,65 @@ pub fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
         ()).unwrap();
 
     // Insert rows into the table
+    // let mut stmt = conn.prepare(
+    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
+    // stmt.execute((1, "sandwich")).unwrap();
+        
+    // conn.execute(
+    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
+    //     (2, "mustard"),
+    // ).unwrap();
+
+    Ok(())
+}
+
+
+
+pub fn db_add(db_path: &str, x: usize) -> Result<(), std::io::Error> {
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+    // Check that the entry does not exist
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
+    let mut rows = stmt.query(&[&x]).unwrap();
+    if rows.next().unwrap().is_some() {
+        println!("Entry id already defined in database. Still overwrite? [y/n]");
+        loop {
+            let mut buffer = String::new();
+            std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+            if buffer.trim() == "y" {
+                break;
+            }
+            else if buffer.trim() == "n" {
+                return Ok(());
+            }
+            else {
+                println!("Still overwrite? [y/n]");
+            }
+        }
+    };
+    
+    println!("Provide new entry in database:");
+    let mut buffer = String::new();
+    std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+    
+    // Insert rows into the table
     let mut stmt = conn.prepare(
         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
-    stmt.execute((13, "sandwich")).unwrap();
-        
-    conn.execute(
-        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
-        (14, "mustard"),
-    ).unwrap();
+    stmt.execute((x, buffer)).unwrap();
+
+    Ok(())
+}
+
+pub fn db_remove(db_path: &str, x: usize) -> Result<(), std::io::Error> {
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+    let mut stmt = conn.prepare("DELETE FROM tasks WHERE id = ?1").unwrap();
+    stmt.execute(&[&x]).unwrap();
+
+    // check if the entry does not exist
+
 
     Ok(())
 }
@@ -79,13 +130,23 @@ pub fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
 #[test]
 fn test_db_setup() {
     // Call the database
-    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+    let db_path: &str = "TodoList_test.db"; // Prepare the path to the database
     db_setup(db_path).unwrap(); // Set database
 
     let conn = Connection::open_with_flags(db_path,
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
 
+    // Prepare example entry
+    let index: i32 = 14;
+    let entry: &str = "mustard";
 
+    // Add example entry to database
+    conn.execute(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
+        (&index, &entry),
+    ).unwrap();
+
+    {
     // Prepare a query statement
     let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
     
@@ -98,12 +159,19 @@ fn test_db_setup() {
 
     assert_eq!(id, 14);
     assert_eq!(task, "mustard");
+    };
+
+    // Close the database
+    conn.close().unwrap();
+
+    // Erase database
+    remove_file(db_path).unwrap();
 
 }
 
 #[test]
-fn test_db_empty_entry() {
-    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+fn test_db_empty_entry() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path: &str = "TodoList_test.db"; // Prepare the path to the database
     db_setup(db_path).unwrap();       // Set database
 
     let index: i32 = -1; // Index of non-existent entry
@@ -112,9 +180,29 @@ fn test_db_empty_entry() {
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
     ).unwrap();
 
-    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
-    let mut rows = stmt.query(&[&index]).unwrap();
+    // Add a couple of entries
+    conn.execute(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
+        (1, "toy"),
+    ).unwrap();
+
+    conn.execute(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
+        (2, "mustard"),
+    ).unwrap();
+
+    {
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
+    let mut rows = stmt.query(&[&index])?;
 
     // Assert that no entry -1 exists
     assert!(rows.next().unwrap().is_none());
+    };
+
+    // Close the database
+    conn.close().unwrap();
+
+    // Erase database
+    remove_file(db_path)?;
+    Ok(())
 }
