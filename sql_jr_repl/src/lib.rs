@@ -149,11 +149,14 @@ pub fn db_remove(db_path: &str, x: usize) -> Result<(), std::io::Error> {
     let conn = Connection::open_with_flags(db_path,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
 
-    let mut stmt = conn.prepare("DELETE FROM tasks WHERE id = ?1").unwrap();
-    stmt.execute(&[&x]).unwrap();
-
-    // check if the entry does not exist
-
+    // Change the entry if it does exist
+    if db_verify(db_path, x) == true {
+        let mut stmt = conn.prepare("DELETE FROM tasks WHERE id = ?1").unwrap();
+        stmt.execute(&[&x]).unwrap();
+    } 
+    else {
+        println!("Entry does not exist in database.");
+    }
 
     Ok(())
 }
@@ -238,17 +241,6 @@ fn test_db_empty_entry() -> Result<(), Box<dyn std::error::Error>> {
     db_writer(db_path, "toy", 1).unwrap();
     db_writer(db_path, "mustard", 2).unwrap();
 
-
-    // conn.execute(
-    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
-    //     (1, "toy"),
-    // ).unwrap();
-
-    // conn.execute(
-    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
-    //     (2, "mustard"),
-    // ).unwrap();
-
     {
     let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
     let mut rows = stmt.query(&[&index])?;
@@ -262,5 +254,36 @@ fn test_db_empty_entry() -> Result<(), Box<dyn std::error::Error>> {
 
     // Erase database
     remove_file(db_path)?;
+    Ok(())
+}
+
+#[test]
+fn test_db_erase() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path: &str = "TodoList_test.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap();       // Set database
+
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
+    ).unwrap();
+
+    // Add a couple of entries
+    db_writer(db_path, "toy", 1).unwrap();
+    db_writer(db_path, "mustard", 2).unwrap();
+
+    // Erase an entry
+    db_remove(db_path, 1).unwrap();
+
+    // Assert that the entry no longer exists
+    {
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
+    let mut rows = stmt.query(&[&1])?;
+    assert!(rows.next().unwrap().is_none());
+    };
+
+    // Close the database
+    conn.close().unwrap();
+
+    // Erase database
+    remove_file(db_path).unwrap();
     Ok(())
 }
