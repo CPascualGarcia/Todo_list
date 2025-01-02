@@ -161,6 +161,17 @@ pub fn db_remove(db_path: &str, x: usize) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+
+pub fn db_size(db_path: &str) -> Result<usize, rusqlite::Error> {
+    let conn = Connection::open(db_path)?;
+
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM tasks")?;
+    let mut rows = stmt.query([])?;
+    let count = rows.next()?.unwrap().get(0)?;
+
+    Ok(count)
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// TESTS
 ///////////////////////////////////////////////////////////////////////////////
@@ -279,6 +290,31 @@ fn test_db_erase() -> Result<(), Box<dyn std::error::Error>> {
     let mut rows = stmt.query(&[&1])?;
     assert!(rows.next().unwrap().is_none());
     };
+
+    // Close the database
+    conn.close().unwrap();
+
+    // Erase database
+    remove_file(db_path).unwrap();
+    Ok(())
+}
+
+#[test]
+fn test_db_size() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path: &str = "TodoList_test.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap();       // Set database
+
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,    
+    ).unwrap();
+
+    // Add a couple of entries
+    db_writer(db_path, "toy", 1).unwrap();
+    db_writer(db_path, "mustard", 2).unwrap();
+
+    // Assert that the size is correct
+    let size = db_size(db_path).unwrap();
+    assert_eq!(size, 2);
 
     // Close the database
     conn.close().unwrap();
