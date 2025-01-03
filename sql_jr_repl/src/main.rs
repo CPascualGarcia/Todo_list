@@ -10,6 +10,8 @@ use std::usize;
 extern crate sql_jr_repl;
 use sql_jr_repl::*;//{writer_line,eraser_line};
 
+// XXX To do -- Add history to the repl
+
 
 const HISTORY_FILE: &str = "./history.txt";
 
@@ -87,11 +89,14 @@ fn main() -> Result<()> {
                                 println!("Reading content... \n{}", lines[x as usize]);
                             },
                             ("erase",x) if x>=0 => {
-                                println!("Erasing content...");
-                                // Close original file
-                                drop(file);
-                                // Erase line
-                                eraser_line(file1_path, x as usize, &mut lines)?;
+                                // println!("Erasing content...");
+                                // // Close original file
+                                // drop(file);
+                                // // Erase line
+                                // eraser_line(file1_path, x as usize, &mut lines)?;
+                                
+                                db_remove(db_path, x as usize)?;
+                                rl.add_history_entry(line.as_str())?;
                             },
                             ("write",x) if x>=0 => {
                                 // Close original file
