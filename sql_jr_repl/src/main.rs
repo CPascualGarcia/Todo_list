@@ -26,7 +26,7 @@ fn main() -> Result<()> {
         let file1_path = "file.txt";
         let file = OpenOptions::new().read(true).write(true).create(true).open(file1_path).unwrap();   
         let reader = BufReader::new(&file);
-        let mut lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
+        let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
 
         //////////////////////////////////////////////////////////////////////////
         // Prepare database
@@ -79,10 +79,10 @@ fn main() -> Result<()> {
                         let inputs: Vec<&str> = line.split_whitespace().collect();
 
                         let indx = inputs[1].parse::<i32>().unwrap();
-                        if indx >= lines.len() as i32 {
-                            println!("Index out of range! List has {} lines", lines.len());
-                            continue
-                        }
+                        // if indx >= lines.len() as i32 {
+                        //     println!("Index out of range! List has {} lines", lines.len());
+                        //     continue
+                        // }
 
                         match (inputs[0],indx) {
                             ("read",x) if x>=0 && x<lines.len() as i32 => {
