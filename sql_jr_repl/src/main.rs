@@ -101,7 +101,7 @@ fn main() -> Result<()> {
 
                                 // In database, check wether the line exists
                                 if db_verify(&db_path, x as usize) == true {
-                                    println!("Entry id already defined in database. Still overwrite? [y/n]");
+                                    println!("Entry id already defined in database: {}\nStill overwrite? [y/n]", db_reader(db_path, x as usize).unwrap());
                                     loop {
                                         let mut buffer = String::new();
                                         std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
