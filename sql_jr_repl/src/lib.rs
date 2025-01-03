@@ -1,5 +1,7 @@
-use std::fs::{OpenOptions,rename,remove_file};
+use std::fs::{OpenOptions,rename};
+use std::fs::remove_file;
 use std::io::prelude::*;
+// use std::result;
 use rusqlite::{Connection,OpenFlags};
 
 pub fn writer_line(file1_path: &str,
@@ -48,6 +50,8 @@ pub fn eraser_line(file1_path: &str, x: usize, lines: &mut Vec<String>) -> Resul
     Ok(())
 } 
 
+////////////////////////////// DATABASE
+
 
 pub fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
     let conn = Connection::open_with_flags(db_path,
@@ -58,16 +62,6 @@ pub fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
         "CREATE TABLE IF NOT EXISTS 
         tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
         ()).unwrap();
-
-    // Insert rows into the table
-    // let mut stmt = conn.prepare(
-    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
-    // stmt.execute((1, "sandwich")).unwrap();
-        
-    // conn.execute(
-    //     "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)",
-    //     (2, "mustard"),
-    // ).unwrap();
 
     Ok(())
 }
@@ -171,6 +165,47 @@ pub fn db_size(db_path: &str) -> Result<usize, rusqlite::Error> {
 
     Ok(count)
 }
+
+
+pub fn db_reader(db_path: &str, x: usize) -> Result<String, rusqlite::Error> {
+
+    // Verify the entry exists
+    if db_verify(db_path, x) == false {
+        println!("Entry does not exist in database.");
+        return Ok("".to_string());
+    }
+    
+    let conn = Connection::open(db_path)?;
+
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
+    let mut rows = stmt.query(&[&x])?;
+
+    let row = rows.next().unwrap().unwrap();
+    let task: String = row.get(1)?;
+
+    Ok(task)
+}
+
+
+pub fn read_all(db_path: &str) -> Result<(), rusqlite::Error> {
+    let conn = Connection::open(db_path).unwrap();
+
+    let mut stmt = conn.prepare("SELECT * FROM tasks").unwrap();
+    let mut rows = stmt.query(()).unwrap();
+
+    while let Some(row) = rows.next().unwrap() {
+        let id: i32 = row.get(0).unwrap();
+        let task: String = row.get(1).unwrap();
+
+        println!("ID: {}, Task: {}", id, task);
+    }
+
+    Ok(())
+}
+
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// TESTS
@@ -315,6 +350,32 @@ fn test_db_size() -> Result<(), Box<dyn std::error::Error>> {
     // Assert that the size is correct
     let size = db_size(db_path).unwrap();
     assert_eq!(size, 2);
+
+    // Close the database
+    conn.close().unwrap();
+
+    // Erase database
+    remove_file(db_path).unwrap();
+    Ok(())
+}
+
+#[test]
+fn test_db_verify() -> Result<(), Box<dyn std::error::Error>> {
+    let db_path: &str = "TodoList_test.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap();       // Set database
+
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
+    ).unwrap();
+
+    // Add a couple of entries
+    db_writer(db_path, "toy", 1).unwrap();
+    db_writer(db_path, "mustard", 2).unwrap();
+
+    // Read the entry whenever it exists
+    assert_eq!(db_reader(db_path, 1).unwrap(), "toy");
+    assert_eq!(db_reader(db_path, 2).unwrap(), "mustard");
+    assert_eq!(db_reader(db_path, 3).unwrap(), "");
 
     // Close the database
     conn.close().unwrap();
