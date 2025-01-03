@@ -44,17 +44,21 @@ fn main() -> Result<()> {
                         break
                     },
                     "size" => {
-                        println!("Size of file: {}", lines.len());
+                        // println!("Size of file: {}", lines.len());
+                        println!("Size of database: {}", db_size(db_path).unwrap());
                     }
                     "Make a sandwich" => {
                         println!("Making a sandwich...");
                     }
 
                     "read" => {
-                        for line in lines {
-                            println!("{}", line);
-                        }
+                        read_all(db_path).unwrap();
+                        // for line in lines {
+                        //     println!("{}", line);
+                        // }
                     },
+
+
                     //  _ => {
                     //     rl.add_history_entry(line.as_str())?;
                     //     // 
@@ -90,11 +94,39 @@ fn main() -> Result<()> {
                                 eraser_line(file1_path, x as usize, &mut lines)?;
                             },
                             ("write",x) if x>=0 => {
-                                
                                 // Close original file
-                                drop(file);
+                                // drop(file);
                                 // Overwrite original file
-                                writer_line(file1_path, x as usize, &lines)?;
+                                // writer_line(file1_path, x as usize, &lines)?;
+
+                                // In database, check wether the line exists
+                                if db_verify(&db_path, x as usize) == true {
+                                    println!("Entry id already defined in database. Still overwrite? [y/n]");
+                                    loop {
+                                        let mut buffer = String::new();
+                                        std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+                                        if buffer.trim() == "y" {
+                                            // Add new item
+                                            db_add(db_path, x as usize)?;
+                                            // println!("Provide content to be written:");
+                                            // let mut buffer: String = String::new();
+                                            // std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+                                            // db_writer(&db_path, &buffer, x as usize)?;
+                                            rl.add_history_entry(line.as_str())?;
+                                            break;
+                                        }
+                                        else if buffer.trim() == "n" {break;}
+                                        else {println!("Still overwrite? [y/n]");}
+                                    }
+                                } else {
+                                    // Add new item
+                                    db_add(db_path, x as usize)?;
+                                    // println!("Provide content to be written:");
+                                    // let mut buffer: String = String::new();
+                                    // std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
+                                    // db_writer(&db_path, &buffer, x as usize)?;
+                                    rl.add_history_entry(line.as_str())?;
+                                }                               
                             },
                             _ => {
                                 println!("Invalid command");
