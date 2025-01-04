@@ -1,5 +1,5 @@
 use std::fs::{OpenOptions,rename};
-use std::fs::remove_file;
+use std::collections::HashMap;
 use std::io::prelude::*;
 // use std::result;
 use rusqlite::{Connection,OpenFlags};
@@ -88,42 +88,6 @@ pub fn db_add(db_path: &str, x: usize) -> Result<(), std::io::Error> {
 }
 
 
-// pub fn db_add(db_path: &str, x: usize) -> Result<(), std::io::Error> {
-//     let conn = Connection::open_with_flags(db_path,
-//         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
-
-//     // Check that the entry does not exist
-//     let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
-//     let mut rows = stmt.query(&[&x]).unwrap();
-//     if rows.next().unwrap().is_some() {
-//         println!("Entry id already defined in database. Still overwrite? [y/n]");
-//         loop {
-//             let mut buffer = String::new();
-//             std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
-//             if buffer.trim() == "y" {
-//                 break;
-//             }
-//             else if buffer.trim() == "n" {
-//                 return Ok(());
-//             }
-//             else {
-//                 println!("Still overwrite? [y/n]");
-//             }
-//         }
-//     };
-    
-//     println!("Provide new entry in database:");
-//     let mut buffer = String::new();
-//     std::io::stdin().read_line(&mut buffer).expect("Failed to read line");
-    
-//     // Insert rows into the table
-//     let mut stmt = conn.prepare(
-//         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
-//     stmt.execute((x, buffer)).unwrap();
-
-//     Ok(())
-// }
-
 
 pub fn db_verify(db_path: &str, x: usize) -> bool {
     let conn = Connection::open_with_flags(db_path,
@@ -203,13 +167,72 @@ pub fn read_all(db_path: &str) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// PARSER
+///////////////////////////////////////////////////////////////////////////////
 
+pub fn parser_input(input: &str) -> Vec<String> {
+    input
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect()
+}
 
+pub enum ReturnType {
+    Int(i32),
+    String(String),
+}
 
+pub fn parser_function(input: &str, command_dict: &HashMap<String, Box<dyn Fn() -> ReturnType>>) -> ReturnType {
+    let parsed_input = parser_input(input);
+    let command = parsed_input[0].clone();
+    let command_function = command_dict.get(&command).unwrap();
+    return command_function();
+    // println!("{}", command_function);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// TESTS
 ///////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+use std::fs::remove_file;
+// use std::any::Any;
+
+
+#[test]
+fn test_parser_input() {
+    let input = "hello world";
+    let expected = vec!["hello", "world"];
+    assert_eq!(parser_input(input), expected);
+}
+
+#[test]
+fn test_parser_function() {
+
+    fn display_hello() -> String {
+        "hello".to_string()
+    }
+    fn display_goodbye() -> i32 {
+        42
+    }
+    
+    // Define HashMap of functions
+    let mut command_dict:  HashMap<String, Box<dyn Fn() -> ReturnType>> = HashMap::new();
+    command_dict.insert("goodbye".to_string(), Box::new(|| ReturnType::Int(display_goodbye())));
+    command_dict.insert("hello".to_string(), Box::new(|| ReturnType::String(display_hello())));
+
+    // Define input
+    let input = "hello world";
+
+    let fn_expected = parser_function(input, &command_dict);
+
+    match fn_expected {
+        ReturnType::String(s) => assert_eq!(s, "hello".to_string()),
+        ReturnType::Int(_) => panic!("Expected a string"),
+    }
+
+}
 
 #[test]
 fn test_db_setup() {
