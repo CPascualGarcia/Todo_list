@@ -180,7 +180,8 @@ pub fn parser_input(input: &str) -> Vec<String> {
 
 pub enum ReturnType {
     Int(i32),
-    String(String),
+    String(String)
+    // Func(Box<dyn Fn(Vec<String>) -> ()>),
 }
 
 pub fn parser_function(input: &str, command_dict: &HashMap<String, Box<dyn Fn() -> ReturnType>>) -> ReturnType {
@@ -188,6 +189,22 @@ pub fn parser_function(input: &str, command_dict: &HashMap<String, Box<dyn Fn() 
     let command = parsed_input[0].clone();
     let command_function = command_dict.get(&command).unwrap();
     return command_function();
+    // println!("{}", command_function);
+}
+
+pub fn parser_function2<'a>(input: &str, command_dict: &'a HashMap<String, Box<dyn Fn() -> ()>>) -> Result<&'a dyn Fn() -> (), Box<dyn std::error::Error>> {
+
+    let parsed_input = parser_input(input);
+    let command = parsed_input[0].clone();
+    match command_dict.get(&command) {
+        Some(command_function) => {
+            return Ok(command_function.as_ref());
+        },
+        None => {
+            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "Command not found")));
+        }
+    }
+    // return command_function();
     // println!("{}", command_function);
 }
 
@@ -216,21 +233,36 @@ fn test_parser_function() {
     fn display_goodbye() -> i32 {
         42
     }
+
+    // fn display_howdy()  -> func {
+    //     42
+    // }
     
     // Define HashMap of functions
     let mut command_dict:  HashMap<String, Box<dyn Fn() -> ReturnType>> = HashMap::new();
     command_dict.insert("goodbye".to_string(), Box::new(|| ReturnType::Int(display_goodbye())));
     command_dict.insert("hello".to_string(), Box::new(|| ReturnType::String(display_hello())));
+    // command_dict.insert("howdy".to_string(), Box::new(|| ReturnType::String(display_howdy)));
+
 
     // Define input
     let input = "hello world";
 
-    let fn_expected = parser_function(input, &command_dict);
+    let fn_expected_1 = parser_function(input, &command_dict);
 
-    match fn_expected {
+    match fn_expected_1 {
         ReturnType::String(s) => assert_eq!(s, "hello".to_string()),
         ReturnType::Int(_) => panic!("Expected a string"),
-    }
+        // _ => panic!("Expected a string"),
+    };
+
+    // let fn_expected_2 = parser_function(input, &command_dict);
+
+    // match fn_expected_2 {
+    //     ReturnType::String(s) => panic!("Expected a function"),
+    //     ReturnType::Int(_) => panic!("Expected a function"),
+    //     ReturnType::Func(_) => assert_eq!(true, true),
+    // }
 
 }
 
@@ -406,4 +438,21 @@ fn test_db_verify() -> Result<(), Box<dyn std::error::Error>> {
     // Erase database
     remove_file(db_path).unwrap();
     Ok(())
+}
+
+#[test]
+fn test_parser() -> Result<(), Box<dyn std::error::Error>> {
+    let s = "hello world this is a test";
+    let (first, rest) = s.split_once(' ').unwrap();
+    
+    assert_eq!(first, "hello");
+    assert_eq!(rest, "world this is a test");
+
+    let t = "hello";
+    
+    assert_eq!( t.split_once(' '), None);
+    
+
+    Ok(())
+
 }
