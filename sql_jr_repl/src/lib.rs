@@ -208,6 +208,31 @@ pub fn parser_function2<'a>(input: &str, command_dict: &'a HashMap<String, Box<d
     // println!("{}", command_function);
 }
 
+pub fn db_done(db_path: &str, x: usize) -> Result<(), std::io::Error> {
+
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+    // Change the entry if it does exist
+    if db_verify(db_path, x) == true {
+        // Read the contents of the entry
+        let task = db_reader(db_path, x).unwrap();
+
+        // Add DONE to task
+        let task_done = format!("[DONE] {}", task);
+
+        // Overwrite the entry
+        let mut stmt = conn.prepare(
+            "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
+        // stmt.execute(&[&x]).unwrap();
+        stmt.execute((x, task_done)).unwrap();
+    } 
+    else {
+        println!("Entry does not exist in database.");
+    }
+    Ok(())
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// TESTS
 ///////////////////////////////////////////////////////////////////////////////

@@ -7,10 +7,8 @@ use std::usize;
 extern crate sql_jr_repl;
 use sql_jr_repl::*;
 
-// XXX To do -- Add history to the repl
-// XXX To do -- Cleanup
-// XXX To do -- Add done status
-// XXX To do -- Add dates to tasks?
+
+// XXX To do -- Add dates to tasks
 
 
 const HISTORY_FILE: &str = "./history.txt";
@@ -102,6 +100,15 @@ fn main() -> Result<()> {
                             },
                             _ => {println!("Invalid input");continue}
                         };
+                    },
+                    "done" => {
+                        match inputs[1].parse::<usize>() {
+                            Ok(x) => db_done(db_path, x)?,
+                            Err(_) => {
+                                println!("Invalid input: please enter a valid number");
+                                continue}
+                        };
+                        rl.add_history_entry(line_in.as_str())?;
                     },
                     "remove" => {
                         match inputs[1].parse::<usize>() {
