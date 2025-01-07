@@ -1,7 +1,7 @@
 
 use iced::Element;
 use iced::widget::{text,text_editor};
-use iced::widget::{row,column};
+use iced::widget::{row,column,container};
 
 struct Editor {
     content: text_editor::Content,
@@ -51,7 +51,10 @@ impl Editor {
         .on_action(Message::TextEditorAction);
         // input.into()
 
-        column![title,input].into()
+        column![title,input].align_x(iced::Center).into()
+
+        // Add something that opens the database, reads and displays the contents
+
     }
 }
 
