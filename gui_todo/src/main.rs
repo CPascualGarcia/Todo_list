@@ -1,8 +1,9 @@
 
-use iced::Element;
+use iced::{Element,Task,Theme};
 use iced::widget::{text,text_editor};
-use iced::widget::{row,column,container};
+use iced::widget::{column};
 
+use std::fmt::format;
 // use std::fmt::Error;
 use std::io;
 use std::path::Path;
@@ -18,21 +19,24 @@ struct Editor {
 
 #[derive(Debug,Clone)]
 enum Message {
-    Print,
-    Edit(text_editor::Action),
-    TextEditorAction(text_editor::Action)
+    TextEditorAction(text_editor::Action),
+    FileLoaded(Result<Arc<String>, Error>)
 }
 
 
 
 impl Editor {
 
-    fn new() -> Self {
-        Self {
+    fn new() -> (Self, Task<Message>) {
+        (
+            Self {
             // content: text_editor::Content::new(),
             content: text_editor::Content::with_text( "This is a text editor"),
             text_input: String::new()
-        }
+        }, 
+            Task::none(),
+            // Task::perform(load_file(format!("{}")), Message::FileLoaded)
+        )
     }
 
     fn title(&self) -> String {
@@ -41,12 +45,18 @@ impl Editor {
 
     fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
-            Message::Print => println!("Hey"),
-            Message::Edit(action) => {
-                self.content.perform(action);
-            },
             Message::TextEditorAction(action) => {
                 self.content.perform(action);
+            },
+            Message::FileLoaded(result) => {
+                // match result {
+                //     Ok(content) => {
+                //         self.content = text_editor::Content::with_text(&content);
+                //     },
+                //     Err(err) => {
+                //         println!("Error loading file: {}", err);
+                //     }
+                // }
             }
         }
         iced::Task::none()
@@ -64,13 +74,18 @@ impl Editor {
         // Add something that opens the database, reads and displays the contents
 
     }
+
+    fn theme(&self) -> Theme {
+        Theme::Dracula
+    }
 }
 
 
 
 pub fn main() -> Result<(), iced::Error> {
     iced::application("To-Do Editor", Editor::update, Editor::view)
-    .run_with(|| (Editor::new(), iced::Task::none()))
+    .theme(Editor::theme)
+    .run_with(|| Editor::new())
 }
 
 async fn pick_file() -> Result<Arc<String>, Error> {
