@@ -1,15 +1,18 @@
 
 use iced::Element;
 use iced::widget::{text,text_editor};
+use iced::widget::{row,column};
 
 struct Editor {
-    content: text_editor::Content
+    content: text_editor::Content,
+    text_input: String
 }
 
 #[derive(Debug,Clone)]
 enum Message {
     Print,
-    Edit(text_editor::Action)
+    Edit(text_editor::Action),
+    TextEditorAction(text_editor::Action)
 }
 
 
@@ -18,12 +21,14 @@ impl Editor {
 
     fn new() -> Self {
         Self {
-            content: text_editor::Content::new(),
+            // content: text_editor::Content::new(),
+            content: text_editor::Content::with_text( "This is a text editor"),
+            text_input: String::new()
         }
     }
 
     fn title(&self) -> String {
-        String::from("ToDo Editor")
+        String::from("Text Editor for a ToDo List")
     }   
 
     fn update(&mut self, message: Message) -> iced::Task<Message> {
@@ -31,15 +36,22 @@ impl Editor {
             Message::Print => println!("Hey"),
             Message::Edit(action) => {
                 self.content.perform(action);
+            },
+            Message::TextEditorAction(action) => {
+                self.content.perform(action);
             }
         }
         iced::Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
-        // self.title();
-        // text("Hello!").into(); // convert the text into an Element (general widget)
-        text_editor(&self.content).on_action(Message::Edit).into()
+
+        let title = text(self.title());
+        let input = iced::widget::TextEditor::new(&self.content)
+        .on_action(Message::TextEditorAction);
+        // input.into()
+
+        column![title,input].into()
     }
 }
 
