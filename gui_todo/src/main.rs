@@ -3,6 +3,14 @@ use iced::Element;
 use iced::widget::{text,text_editor};
 use iced::widget::{row,column,container};
 
+// use std::fmt::Error;
+use std::io;
+use std::path::Path;
+use std::sync::Arc;
+
+use tokio;
+use rfd;
+
 struct Editor {
     content: text_editor::Content,
     text_input: String
@@ -63,4 +71,27 @@ impl Editor {
 pub fn main() -> Result<(), iced::Error> {
     iced::application("To-Do Editor", Editor::update, Editor::view)
     .run_with(|| (Editor::new(), iced::Task::none()))
+}
+
+async fn pick_file() -> Result<Arc<String>, Error> {
+    let handle = rfd::AsyncFileDialog::new()
+            .set_title("Pick a database")
+            .pick_file().await.ok_or(Error::DialogClosed)?;
+
+    load_file(handle.path()).await
+}
+
+async fn load_file(path: impl AsRef<Path>) -> Result<Arc<String>, Error> {//io::Result<String> {
+    // std::fs::read_to_string(path)
+    tokio::fs::read_to_string(path)
+            .await
+            .map(Arc::new)
+            .map_err(|err| err.kind())
+            .map_err(Error::IO)
+}
+
+#[derive(Debug,Clone)]
+enum Error {
+    DialogClosed,
+    IO(io::ErrorKind)
 }
