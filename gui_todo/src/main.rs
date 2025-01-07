@@ -30,12 +30,14 @@ impl Editor {
     fn new() -> (Self, Task<Message>) {
         (
             Self {
-            // content: text_editor::Content::new(),
-            content: text_editor::Content::with_text( "This is a text editor"),
+            content: text_editor::Content::with_text(include_str!(r"main.rs")),
+            // content: text_editor::Content::with_text( "This is a text editor"),
             text_input: String::new()
         }, 
-            Task::none(),
-            // Task::perform(load_file(format!("{}")), Message::FileLoaded)
+            // Task::none(),
+            Task::perform(load_file(
+                format!("{}/src/main.rs", env!("CARGO_MANIFEST_DIR"))),
+                Message::FileLoaded) // We do "Message/src/main.rs"
         )
     }
 
@@ -49,14 +51,15 @@ impl Editor {
                 self.content.perform(action);
             },
             Message::FileLoaded(result) => {
-                // match result {
-                //     Ok(content) => {
-                //         self.content = text_editor::Content::with_text(&content);
-                //     },
-                //     Err(err) => {
-                //         println!("Error loading file: {}", err);
-                //     }
-                // }
+                match result {
+                    Ok(content) => {
+                        self.content = text_editor::Content::with_text(&content);
+                    },
+                    Err(err) => {
+                        // println!("Error loading file: {}", err);
+                        print!("Error loading file");
+                    }
+                }
             }
         }
         iced::Task::none()
