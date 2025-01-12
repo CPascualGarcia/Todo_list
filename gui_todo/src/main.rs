@@ -1,81 +1,102 @@
 
-use iced::{Element,Task,Theme};
-use iced::widget::{text,text_editor};
-use iced::widget::{column};
+use iced::{Element,Length,Task,Theme};
+use iced::widget::{Container,Text,column};
+// use iced::widget::{text,text_editor};
 
-use std::fmt::format;
-// use std::fmt::Error;
 use std::io;
-use std::path::Path;
-use std::sync::Arc;
+// use std::path::Path;
+// use std::sync::Arc;
 
-use tokio;
-use rfd;
+// use tokio;
+// use rfd;
 
-struct Editor {
-    content: text_editor::Content,
-    text_input: String
+use rusqlite::{Connection,OpenFlags};
+
+
+
+fn main() -> Result<(),AppError> {
+    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+    db_setup(db_path).unwrap();       // Set database
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+    
+
+    // Set the app
+    iced::application("To-Do DBEditor", DBEditor::update, DBEditor::view)
+    .theme(DBEditor::theme)
+    .run_with(|| DBEditor::new(conn))?;
+    Ok(())
+}
+
+// fn db_setup(db_path: &str) -> Result<(), AppError> {
+//     let conn = Connection::open_with_flags(db_path,
+//         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+//     // Create basic table
+//     conn.execute(
+//         "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
+//         ());
+//     Ok(())
+// }
+
+#[derive(Debug)]
+enum AppError {
+    StdError(Box<dyn std::error::Error>),
+    IcedError(iced::Error),
+    IO(io::ErrorKind)
+}
+
+impl From<iced::Error> for AppError {
+    fn from(e: iced::Error) -> Self {
+        AppError::IcedError(e)
+    }
+}
+
+
+struct DBEditor {
+    db_conn: Connection,
 }
 
 #[derive(Debug,Clone)]
 enum Message {
-    TextEditorAction(text_editor::Action),
-    FileLoaded(Result<Arc<String>, Error>)
+    
 }
 
 
 
-impl Editor {
-
-    fn new() -> (Self, Task<Message>) {
+impl DBEditor {
+    fn new(connection:Connection) -> (Self, Task<Message>) {
         (
             Self {
-            content: text_editor::Content::with_text(include_str!(r"main.rs")),
-            // content: text_editor::Content::with_text( "This is a text editor"),
-            text_input: String::new()
-        }, 
-            // Task::none(),
-            Task::perform(load_file(
-                format!("{}/src/main.rs", env!("CARGO_MANIFEST_DIR"))),
-                Message::FileLoaded) // We do "Message/src/main.rs"
+            db_conn: connection,
+            // db_path: "TodoList.db".to_string(),
+            // db_buffer: "".to_string(),
+            // db_index: 0
+        },
+        Task::none()
         )
     }
 
-    fn title(&self) -> String {
-        String::from("Text Editor for a ToDo List")
-    }   
-
-    fn update(&mut self, message: Message) -> iced::Task<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::TextEditorAction(action) => {
-                self.content.perform(action);
-            },
-            Message::FileLoaded(result) => {
-                match result {
-                    Ok(content) => {
-                        self.content = text_editor::Content::with_text(&content);
-                    },
-                    Err(err) => {
-                        // println!("Error loading file: {}", err);
-                        print!("Error loading file");
-                    }
-                }
-            }
+            
         }
-        iced::Task::none()
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    fn view(&self) -> Element<Message> {
+        // todo!()
+        // db_writer(&self.db_conn, "mustard", 14).unwrap();
+        let query_input = 5;
+        let result = db_reader(&self.db_conn, query_input as usize).unwrap();
 
-        let title = text(self.title());
-        let input = iced::widget::TextEditor::new(&self.content)
-        .on_action(Message::TextEditorAction);
-        // input.into()
-
-        column![title,input].align_x(iced::Center).into()
-
-        // Add something that opens the database, reads and displays the contents
-
+        let layout = column![Text::new(result)];
+        
+        
+        Container::new(layout)
+            .align_x(iced::Center)
+            .align_y(iced::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     fn theme(&self) -> Theme {
@@ -85,31 +106,61 @@ impl Editor {
 
 
 
-pub fn main() -> Result<(), iced::Error> {
-    iced::application("To-Do Editor", Editor::update, Editor::view)
-    .theme(Editor::theme)
-    .run_with(|| Editor::new())
+
+
+
+
+
+
+
+
+
+fn db_reader(conn: &Connection, x: usize) -> Result<String, rusqlite::Error> {
+
+    // Verify the entry exists
+    if db_verify(conn, x) == false {
+        println!("Entry does not exist in database.");
+        return Ok("NONE".to_string());
+    }
+    
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
+    let mut rows = stmt.query(&[&x])?;
+
+    let row = rows.next().unwrap().unwrap();
+    let task: String = row.get(1)?;
+
+    Ok(task)
 }
 
-async fn pick_file() -> Result<Arc<String>, Error> {
-    let handle = rfd::AsyncFileDialog::new()
-            .set_title("Pick a database")
-            .pick_file().await.ok_or(Error::DialogClosed)?;
 
-    load_file(handle.path()).await
+fn db_verify(conn: &Connection, x: usize) -> bool {
+
+    // Check that the entry does not exist
+    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1").unwrap();
+    let mut rows = stmt.query(&[&x]).unwrap();
+    if rows.next().unwrap().is_some() {
+        return true}
+    else {return false};
 }
 
-async fn load_file(path: impl AsRef<Path>) -> Result<Arc<String>, Error> {//io::Result<String> {
-    // std::fs::read_to_string(path)
-    tokio::fs::read_to_string(path)
-            .await
-            .map(Arc::new)
-            .map_err(|err| err.kind())
-            .map_err(Error::IO)
+pub fn db_writer(conn: &Connection, buffer: &str, x: usize) -> Result<(), std::io::Error> {
+    // Insert rows into the table
+    let mut stmt = conn.prepare(
+        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
+    stmt.execute((x, buffer)).unwrap();
+
+    Ok(())
 }
 
-#[derive(Debug,Clone)]
-enum Error {
-    DialogClosed,
-    IO(io::ErrorKind)
+fn db_setup(db_path: &str) -> Result<(), std::io::Error> {
+    let conn = Connection::open_with_flags(db_path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
+
+    // Create basic table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS 
+        tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
+        ()).unwrap();
+
+    Ok(())
 }
