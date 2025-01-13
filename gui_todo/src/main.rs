@@ -1,14 +1,10 @@
 
 use iced::{Element,Length,Task,Theme};
-use iced::widget::{Button,Container,Text,TextEditor,column,text_editor};
+use iced::widget::{Button,Container,Text,column,text_editor};
 // use iced::widget::{text,text_editor};
 
-use std::io;
-// use std::path::Path;
+// use std::io;
 use std::sync::Arc;
-
-// use tokio;
-// use rfd;
 
 use rusqlite::{Connection,OpenFlags};
 
@@ -47,7 +43,7 @@ enum AppError {
     // StdError(std::error::Error),
     IcedError(Arc<iced::Error>),
     RSQLError(Arc<rusqlite::Error>),
-    IO(io::ErrorKind)
+    // IO(io::ErrorKind)
 }
 
 
@@ -56,7 +52,7 @@ impl Clone for AppError {
         match self {
             AppError::IcedError(err) => AppError::IcedError(err.clone()),
             AppError::RSQLError(err) => AppError::RSQLError(err.clone()),
-            AppError::IO(err) => AppError::IO(err.clone()),
+            // AppError::IO(err) => AppError::IO(err.clone()),
         }
     }
 }
@@ -67,7 +63,7 @@ impl std::fmt::Display for AppError {
             // AppError::StdError(err) => write!(f, "Standard error: {}", err),
             AppError::IcedError(err) => write!(f, "Iced error: {}", err),
             AppError::RSQLError(err) => write!(f, "Rusqlite error: {}", err),
-            AppError::IO(err) => write!(f, "IO error: {}", err),
+            // AppError::IO(err) => write!(f, "IO error: {}", err),
         }
     }
 }
@@ -88,13 +84,15 @@ impl From<rusqlite::Error> for AppError {
 struct DBEditor {
     db_conn: Connection,
     content: text_editor::Content,
-    // query: String 
+    query: String,
+    result: String
 }
 
 #[derive(Debug,Clone)]
 enum Message {
     TextEditorAction(text_editor::Action),
-    TextAdded(Result<String, AppError>)
+    // TextAdded(Result<String, AppError>),
+    QueryDo
 }
 
 
@@ -106,7 +104,8 @@ impl DBEditor {
             db_conn: connection,
             content: text_editor::Content::with_text("Write here the no. of the line (e.g. 5)"),
             
-            // query: "".to_string()
+            query: String::new(),
+            result: String::new(),
             // db_path: "TodoList.db".to_string(),
             // db_buffer: "".to_string(),
             // db_index: 0
@@ -118,19 +117,42 @@ impl DBEditor {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            // Message::TextEditorAction(action) => {
+            //     self.content.perform(action);
+            //     db_writer(&self.db_conn, "mustard", 14).unwrap();
+            // },
             Message::TextEditorAction(action) => {
                 self.content.perform(action);
-                db_writer(&self.db_conn, "mustard", 14).unwrap();
+                self.query = self.content.text();
+                // db_writer(&self.db_conn, "mustard", 14).unwrap();
             },
-            Message::TextAdded(result) => {
-                match result {
-                    Ok(content) => {
-                        self.content = text_editor::Content::with_text(&content);
+            // Message::TextAdded(result) => {
+            //     match result {
+            //         Ok(content) => {
+            //             self.content = text_editor::Content::with_text(&content);
+            //         },
+            //         Err(err) => {
+            //             println!("Error loading file: {}", err);
+            //         }
+            //     }
+            // },
+            Message::QueryDo => {
+                
+                match self.query.trim().parse::<usize>() {
+                    Ok(query_input) => {
+                        self.result = db_reader(&self.db_conn, &query_input).unwrap();
                     },
                     Err(err) => {
-                        println!("Error loading file: {}", err);
+                        println!("Error parsing query: {}", err);
+                        println!("{:?}",self.query);
                     }
-                }
+                };
+                let query_input = self.query.trim().parse::<usize>().unwrap();
+                self.result = db_reader(&self.db_conn, &query_input).unwrap();
+                // Task::perform(async move{
+                //     db_writer(&self.db_conn, "mustard", &self.content.as_text().parse::<usize>()).unwrap()},
+                //      Message::TextEditorAction);
+                
             }
         }
 
@@ -140,23 +162,31 @@ impl DBEditor {
     fn view(&self) -> Element<'_,Message> {
         // todo!()
         // db_writer(&self.db_conn, "mustard", 14).unwrap();
-        let query_input = 5;
-        let result = db_reader(&self.db_conn, query_input as usize).unwrap();
+        let query_input = 5 as usize;
+        let result = db_reader(&self.db_conn, &query_input).unwrap();
 
         let display = Text::new("No. of the line: ");
         
-        let input = TextEditor::new(&self.content)
-            .on_action(Message::TextEditorAction);
+        // let input = TextEditor::new(&self.content)
+        //     .on_action(Message::TextEditorAction);
         
+        let input = iced::widget::TextEditor::new(&self.content)
+            .on_action(Message::TextEditorAction);
+
 
         let exec_button = Button::new("Execute")
-            .on_press(Message::TextAdded(db_reader(&self.db_conn, query_input as usize)));
+        .on_press(Message::QueryDo);
 
-
+        let output = Text::new(&self.result);
 
 
         let layout = column![
-            exec_button,Text::new(result),display,input];
+            exec_button,
+            Text::new(result),
+            display,
+            input,
+            output
+            ];
         
         Container::new(layout)
             .align_x(iced::Center)
@@ -182,11 +212,11 @@ impl DBEditor {
 
 
 
-fn db_reader(conn: &Connection, x: usize) -> Result<String, AppError> {
+fn db_reader(conn: &Connection, x: &usize) -> Result<String, AppError> {
 
     // Verify the entry exists
-    if db_verify(conn, x) == false {
-        println!("Entry does not exist in database.");
+    if db_verify(conn, *x) == false {
+        // println!("Entry does not exist in database.");
         return Ok("NONE".to_string());
     }
     
@@ -210,7 +240,7 @@ fn db_verify(conn: &Connection, x: usize) -> bool {
     else {return false};
 }
 
-pub fn db_writer(conn: &Connection, buffer: &str, x: usize) -> Result<(), std::io::Error> {
+async fn db_writer(conn: &Connection, buffer: &str, x: usize) -> Result<(), std::io::Error> {
     // Insert rows into the table
     let mut stmt = conn.prepare(
         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
