@@ -142,13 +142,10 @@ impl DBEditor {
                     Ok(query_input) => {
                         self.result = db_reader(&self.db_conn, &query_input).unwrap();
                     },
-                    Err(err) => {
-                        println!("Error parsing query: {}", err);
-                        println!("{:?}",self.query);
+                    Err(_) => {
+                        self.result = "Error parsing query".to_string();
                     }
                 };
-                let query_input = self.query.trim().parse::<usize>().unwrap();
-                self.result = db_reader(&self.db_conn, &query_input).unwrap();
                 // Task::perform(async move{
                 //     db_writer(&self.db_conn, "mustard", &self.content.as_text().parse::<usize>()).unwrap()},
                 //      Message::TextEditorAction);
