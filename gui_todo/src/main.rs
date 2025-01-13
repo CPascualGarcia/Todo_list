@@ -1,17 +1,21 @@
 
 use iced::{Element,Length,Task,Theme};
-use iced::widget::{Container,Text,column};
+use iced::widget::{Button,Container,Text,TextEditor,column,text_editor};
 // use iced::widget::{text,text_editor};
 
 use std::io;
 // use std::path::Path;
-// use std::sync::Arc;
+use std::sync::Arc;
 
 // use tokio;
 // use rfd;
 
 use rusqlite::{Connection,OpenFlags};
 
+
+// TO DO
+// Add message logics
+// Add editor input
 
 
 fn main() -> Result<(),AppError> {
@@ -40,25 +44,57 @@ fn main() -> Result<(),AppError> {
 
 #[derive(Debug)]
 enum AppError {
-    StdError(Box<dyn std::error::Error>),
-    IcedError(iced::Error),
+    // StdError(std::error::Error),
+    IcedError(Arc<iced::Error>),
+    RSQLError(Arc<rusqlite::Error>),
     IO(io::ErrorKind)
+}
+
+
+impl Clone for AppError {
+    fn clone(&self) -> Self {
+        match self {
+            AppError::IcedError(err) => AppError::IcedError(err.clone()),
+            AppError::RSQLError(err) => AppError::RSQLError(err.clone()),
+            AppError::IO(err) => AppError::IO(err.clone()),
+        }
+    }
+}
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            // AppError::StdError(err) => write!(f, "Standard error: {}", err),
+            AppError::IcedError(err) => write!(f, "Iced error: {}", err),
+            AppError::RSQLError(err) => write!(f, "Rusqlite error: {}", err),
+            AppError::IO(err) => write!(f, "IO error: {}", err),
+        }
+    }
 }
 
 impl From<iced::Error> for AppError {
     fn from(e: iced::Error) -> Self {
-        AppError::IcedError(e)
+        AppError::IcedError(Arc::new(e))
+    }
+}
+
+impl From<rusqlite::Error> for AppError {
+    fn from(e: rusqlite::Error) -> Self {
+        AppError::RSQLError(Arc::new(e))
     }
 }
 
 
 struct DBEditor {
     db_conn: Connection,
+    content: text_editor::Content,
+    // query: String 
 }
 
 #[derive(Debug,Clone)]
 enum Message {
-    
+    TextEditorAction(text_editor::Action),
+    TextAdded(Result<String, AppError>)
 }
 
 
@@ -68,28 +104,59 @@ impl DBEditor {
         (
             Self {
             db_conn: connection,
+            content: text_editor::Content::with_text("Write here the no. of the line (e.g. 5)"),
+            
+            // query: "".to_string()
             // db_path: "TodoList.db".to_string(),
             // db_buffer: "".to_string(),
             // db_index: 0
         },
+        // Task::perform(future, Message::TextAdded)
         Task::none()
         )
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            
+            Message::TextEditorAction(action) => {
+                self.content.perform(action);
+                db_writer(&self.db_conn, "mustard", 14).unwrap();
+            },
+            Message::TextAdded(result) => {
+                match result {
+                    Ok(content) => {
+                        self.content = text_editor::Content::with_text(&content);
+                    },
+                    Err(err) => {
+                        println!("Error loading file: {}", err);
+                    }
+                }
+            }
         }
+
+        iced::Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_,Message> {
         // todo!()
         // db_writer(&self.db_conn, "mustard", 14).unwrap();
         let query_input = 5;
         let result = db_reader(&self.db_conn, query_input as usize).unwrap();
 
-        let layout = column![Text::new(result)];
+        let display = Text::new("No. of the line: ");
         
+        let input = TextEditor::new(&self.content)
+            .on_action(Message::TextEditorAction);
+        
+
+        let exec_button = Button::new("Execute")
+            .on_press(Message::TextAdded(db_reader(&self.db_conn, query_input as usize)));
+
+
+
+
+        let layout = column![
+            exec_button,Text::new(result),display,input];
         
         Container::new(layout)
             .align_x(iced::Center)
@@ -115,7 +182,7 @@ impl DBEditor {
 
 
 
-fn db_reader(conn: &Connection, x: usize) -> Result<String, rusqlite::Error> {
+fn db_reader(conn: &Connection, x: usize) -> Result<String, AppError> {
 
     // Verify the entry exists
     if db_verify(conn, x) == false {
