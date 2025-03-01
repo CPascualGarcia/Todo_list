@@ -1,9 +1,7 @@
 
 use iced::{Element,Length,Renderer,Task,Theme};
 use iced::widget::{Button,Container,Text,column,text_editor};
-// use iced::widget::{text,text_editor};
 
-// use std::io;
 use std::sync::Arc;
 
 use rusqlite::{Connection,OpenFlags};
@@ -137,20 +135,19 @@ impl DBEditor {
                 
             },
             Message::QueryChange => {
-                let inputs = parser_input(&self.query); 
-
-                if inputs.len() < 2 {
-                    self.result_add = "error parsing query".to_string();
+                if parser_input(&self.query).len() < 2 {
+                    self.result_add = "Invalid query".to_string();
                     ()
-                };
-                
-                match (inputs[0].parse::<usize>(), inputs[1].parse::<String>()) {
-                    (Ok(line), Ok(contents_line)) => {
-                        db_writer(&self.db_conn, contents_line, line).unwrap();
-                        self.result_add = "New task added".to_string();
-                    },
-                    _ => {
-                        self.result_add = "Unable to parse query".to_string();
+                } else {
+                    let (line1, contents_line1) = &self.query.trim().split_once(' ').unwrap();
+                    match (line1.parse::<usize>(), contents_line1.parse::<String>()) {                    
+                        (Ok(line), Ok(contents_line)) => {
+                            db_writer(&self.db_conn, contents_line, line).unwrap();
+                            self.result_add = "New task added".to_string();
+                        },
+                        _ => {
+                            self.result_add = "Unable to parse query".to_string();
+                        }
                     }
                 }
             }
