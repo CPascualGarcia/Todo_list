@@ -10,8 +10,8 @@ use rusqlite::{Connection,OpenFlags};
 
 
 // TO DO
-// Add message logics
-// Add editor input
+// For the Read feature, only the first word is displayed!
+// After adding one element, the Read feature first returns an error, then the proper answer
 
 
 fn main() -> Result<(),AppError> {
@@ -28,15 +28,6 @@ fn main() -> Result<(),AppError> {
     Ok(())
 }
 
-// fn db_setup(db_path: &str) -> Result<(), AppError> {
-//     let conn = Connection::open_with_flags(db_path,
-//         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE).unwrap();
-//     // Create basic table
-//     conn.execute(
-//         "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
-//         ());
-//     Ok(())
-// }
 
 #[derive(Debug)]
 enum AppError {
@@ -94,7 +85,6 @@ struct DBEditor {
 enum Message {
     TextEditorAction(text_editor::Action),
     TextEditorActionAdd(text_editor::Action),
-    // TextAdded(Result<String, AppError>),
     QueryDo,
     QueryChange
 }
@@ -130,7 +120,6 @@ impl DBEditor {
             Message::TextEditorActionAdd(action) => {
                 self.content_add.perform(action);
                 self.query = self.content_add.text();
-                // db_writer(&self.db_conn, "mustard", 14).unwrap();
             },
             Message::QueryDo => {
                 
@@ -171,8 +160,6 @@ impl DBEditor {
     }
 
     fn view(&self) -> Element<'_,Message> {
-        // todo!()
-        // db_writer(&self.db_conn, "mustard", 14).unwrap();
         let query_input = 5 as usize;
         let result = db_reader(&self.db_conn, &query_input).unwrap();
 
