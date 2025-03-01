@@ -1,5 +1,5 @@
 
-use iced::{Element,Length,Task,Theme};
+use iced::{Element,Length,Renderer,Task,Theme};
 use iced::widget::{Button,Container,Text,column,text_editor};
 // use iced::widget::{text,text_editor};
 
@@ -84,15 +84,19 @@ impl From<rusqlite::Error> for AppError {
 struct DBEditor {
     db_conn: Connection,
     content: text_editor::Content,
+    content_add: text_editor::Content,
     query: String,
-    result: String
+    result: String,
+    result_add: String
 }
 
 #[derive(Debug,Clone)]
 enum Message {
     TextEditorAction(text_editor::Action),
+    TextEditorActionAdd(text_editor::Action),
     // TextAdded(Result<String, AppError>),
-    QueryDo
+    QueryDo,
+    QueryChange
 }
 
 
@@ -103,9 +107,11 @@ impl DBEditor {
             Self {
             db_conn: connection,
             content: text_editor::Content::with_text("Write here the no. of the line (e.g. 5)"),
+            content_add: text_editor::Content::with_text("Write here as: <line no.> <task>"),
             
             query: String::new(),
             result: String::new(),
+            result_add: String::new(),
             // db_path: "TodoList.db".to_string(),
             // db_buffer: "".to_string(),
             // db_index: 0
@@ -117,25 +123,15 @@ impl DBEditor {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            // Message::TextEditorAction(action) => {
-            //     self.content.perform(action);
-            //     db_writer(&self.db_conn, "mustard", 14).unwrap();
-            // },
             Message::TextEditorAction(action) => {
                 self.content.perform(action);
                 self.query = self.content.text();
+            },
+            Message::TextEditorActionAdd(action) => {
+                self.content_add.perform(action);
+                self.query = self.content_add.text();
                 // db_writer(&self.db_conn, "mustard", 14).unwrap();
             },
-            // Message::TextAdded(result) => {
-            //     match result {
-            //         Ok(content) => {
-            //             self.content = text_editor::Content::with_text(&content);
-            //         },
-            //         Err(err) => {
-            //             println!("Error loading file: {}", err);
-            //         }
-            //     }
-            // },
             Message::QueryDo => {
                 
                 match self.query.trim().parse::<usize>() {
@@ -150,6 +146,24 @@ impl DBEditor {
                 //     db_writer(&self.db_conn, "mustard", &self.content.as_text().parse::<usize>()).unwrap()},
                 //      Message::TextEditorAction);
                 
+            },
+            Message::QueryChange => {
+                let inputs = parser_input(&self.query); 
+
+                if inputs.len() < 2 {
+                    self.result_add = "error parsing query".to_string();
+                    ()
+                };
+                
+                match (inputs[0].parse::<usize>(), inputs[1].parse::<String>()) {
+                    (Ok(line), Ok(contents_line)) => {
+                        db_writer(&self.db_conn, contents_line, line).unwrap();
+                        self.result_add = "New task added".to_string();
+                    },
+                    _ => {
+                        self.result_add = "Unable to parse query".to_string();
+                    }
+                }
             }
         }
 
@@ -162,27 +176,42 @@ impl DBEditor {
         let query_input = 5 as usize;
         let result = db_reader(&self.db_conn, &query_input).unwrap();
 
-        let display = Text::new("No. of the line: ");
-        
-        // let input = TextEditor::new(&self.content)
-        //     .on_action(Message::TextEditorAction);
+        // Verification of an entry
+        let display = Text::new("Check task at given line number: ");
         
         let input = iced::widget::TextEditor::new(&self.content)
             .on_action(Message::TextEditorAction);
 
-
-        let exec_button = Button::new("Execute")
+        let exec_button = Button::new("Search")
         .on_press(Message::QueryDo);
 
         let output = Text::new(&self.result);
+        //
+        
+        // Addition/modification of an entry
+        let display_add: Text<'_, Theme, Renderer> = Text::new("Add/overwrite task: ");
 
+        let input_add: iced::widget::TextEditor<'_, _, Message> = iced::widget::TextEditor::new(&self.content_add)
+            .on_action(Message::TextEditorActionAdd);
+
+        let exec_button_add: iced::widget::Button<'_, Message, Theme, Renderer> = Button::new("Add")
+        .on_press(Message::QueryChange);
+
+        let output_add: Text<'_, Theme, Renderer> = Text::new(&self.result_add);
+        //
 
         let layout = column![
-            exec_button,
             Text::new(result),
             display,
             input,
-            output
+            exec_button,
+            output,
+            ///////////////////// TODO move this to another column
+            display_add,
+            input_add,
+            exec_button_add,
+            output_add
+            /////////////////////
             ];
         
         Container::new(layout)
@@ -207,6 +236,12 @@ impl DBEditor {
 
 
 
+fn parser_input(input: &str) -> Vec<String> {
+    input
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect()
+}
 
 
 fn db_reader(conn: &Connection, x: &usize) -> Result<String, AppError> {
@@ -237,7 +272,7 @@ fn db_verify(conn: &Connection, x: usize) -> bool {
     else {return false};
 }
 
-async fn db_writer(conn: &Connection, buffer: &str, x: usize) -> Result<(), std::io::Error> {
+fn db_writer(conn: &Connection, buffer: String, x: usize) -> Result<(), std::io::Error> {
     // Insert rows into the table
     let mut stmt = conn.prepare(
         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)").unwrap();
