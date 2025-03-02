@@ -1,6 +1,6 @@
 
 use iced::{Element,Length,Renderer,Task,Theme};
-use iced::widget::{Button,Container,Text,column,text_editor};
+use iced::widget::{Button,Container,Text,column,row,text_editor};
 
 use std::sync::Arc;
 
@@ -8,7 +8,7 @@ use rusqlite::{Connection,OpenFlags};
 
 
 // TO DO
-// For the Read feature, only the first word is displayed!
+// Add a general header
 // After adding one element, the Read feature first returns an error, then the proper answer
 
 
@@ -157,8 +157,8 @@ impl DBEditor {
     }
 
     fn view(&self) -> Element<'_,Message> {
-        let query_input = 5 as usize;
-        let result = db_reader(&self.db_conn, &query_input).unwrap();
+        // let query_input = 5 as usize;
+        // let result = db_reader(&self.db_conn, &query_input).unwrap();
 
         // Verification of an entry
         let display = Text::new("Check task at given line number: ");
@@ -184,24 +184,57 @@ impl DBEditor {
         let output_add: Text<'_, Theme, Renderer> = Text::new(&self.result_add);
         //
 
-        let layout = column![
-            Text::new(result),
-            display,
-            input,
-            exec_button,
-            output,
-            ///////////////////// TODO move this to another column
-            display_add,
-            input_add,
-            exec_button_add,
-            output_add
-            /////////////////////
-            ];
+        // let layout = column![
+        //     Text::new(result),
+        //     display,
+        //     input,
+        //     exec_button,
+        //     output,
+        //     ///////////////////// 
+        //     display_add,
+        //     input_add,
+        //     exec_button_add,
+        //     output_add
+        //     /////////////////////
+        //     ];
+
+        // let layout1 = column![
+        //     Text::new(result),
+        //     display,
+        //     input,
+        //     exec_button,
+        //     output];
+
+        // let layout2 = column![
+        //     display_add,
+        //     input_add,
+        //     exec_button_add,
+        //     output_add
+        //     ];
         
-        Container::new(layout)
-            .align_x(iced::Center)
-            .align_y(iced::Center)
-            .width(Length::Fill)
+        let layout = row![
+            column![
+                // Text::new(result),
+                display,
+                input,
+                exec_button,
+                output
+                ],
+            column![
+                display_add,
+                input_add,
+                exec_button_add,
+                output_add
+                ]
+            ];
+
+        let header = Text::new("Welcome to the to-do list editor");
+        let layout2 = column![header.center(), layout].align_x(iced::Alignment::Center);
+        
+        Container::new(layout2)
+            // .align_x(iced::Center)
+            .align_y(iced::Alignment::Center)
+            // .width(Length::Fill)
             .height(Length::Fill)
             .into()
     }
