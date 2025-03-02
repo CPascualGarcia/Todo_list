@@ -8,7 +8,8 @@ use rusqlite::{Connection,OpenFlags};
 
 
 // TO DO
-// Add a general header
+// Formatting - adjust spces for the text editor
+// Asynchronous functionalities
 // After adding one element, the Read feature first returns an error, then the proper answer
 
 
@@ -100,9 +101,6 @@ impl DBEditor {
             query: String::new(),
             result: String::new(),
             result_add: String::new(),
-            // db_path: "TodoList.db".to_string(),
-            // db_buffer: "".to_string(),
-            // db_index: 0
         },
         // Task::perform(future, Message::TextAdded)
         Task::none()
@@ -159,6 +157,7 @@ impl DBEditor {
     fn view(&self) -> Element<'_,Message> {
         // let query_input = 5 as usize;
         // let result = db_reader(&self.db_conn, &query_input).unwrap();
+        // let result_holder = Text::new(result),
 
         // Verification of an entry
         let display = Text::new("Check task at given line number: ");
@@ -184,37 +183,9 @@ impl DBEditor {
         let output_add: Text<'_, Theme, Renderer> = Text::new(&self.result_add);
         //
 
-        // let layout = column![
-        //     Text::new(result),
-        //     display,
-        //     input,
-        //     exec_button,
-        //     output,
-        //     ///////////////////// 
-        //     display_add,
-        //     input_add,
-        //     exec_button_add,
-        //     output_add
-        //     /////////////////////
-        //     ];
-
-        // let layout1 = column![
-        //     Text::new(result),
-        //     display,
-        //     input,
-        //     exec_button,
-        //     output];
-
-        // let layout2 = column![
-        //     display_add,
-        //     input_add,
-        //     exec_button_add,
-        //     output_add
-        //     ];
         
         let layout = row![
             column![
-                // Text::new(result),
                 display,
                 input,
                 exec_button,
